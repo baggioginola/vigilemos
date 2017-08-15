@@ -10,6 +10,18 @@ def initConfig():
         conf = json.load(json_data)
     return conf
 
+
+def getVideoName(numRecordedVideos=0):
+    videoName = 'output'
+    extVideo = '.avi'
+    numRecordedVideos = numRecordedVideos
+    return videoName + str(numRecordedVideos) + extVideo
+
+def sendVideo(file):
+    url = 'http://192.168.0.21/test.php'
+    files = {'file': open(file, 'rb')}
+    r = requests.post(url, files=files)
+
 conf = initConfig()
 
 camera = cv2.VideoCapture(0)
@@ -17,11 +29,14 @@ time.sleep(conf["camera_warmup_time"])
 
 firstFrame = None
 
-video = Video()
-# loop over the frames of the video
+numRecordedVideos = 0
+video = Video("", getVideoName(numRecordedVideos))
+framesRecorded = 0
+
 while True:
     (grabbed, frame) = camera.read()
     text = "Unoccupied"
+    movement = False
 
     if not grabbed:
         break
@@ -51,16 +66,25 @@ while True:
         (x, y, w, h) = cv2.boundingRect(c)
         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
         text = "Occupied"
+        movement = True
 
     # draw the text and timestamp on the frame
     cv2.putText(frame, "Room Status:{}".format(text), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
     cv2.putText(frame, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
 
-    # out.write(frame)
     cv2.imshow("Security Feed", frame)
-    if (text == "Occupied"):
+
+    if (movement == True):
         video.saveVideo(frame)
+        framesRecorded += 1
+
+    if (framesRecorded == 16):
+        del video
+        sendVideo(getVideoName(numRecordedVideos))
+        numRecordedVideos += 1
+        video = Video("", getVideoName(numRecordedVideos))
+        framesRecorded = 0
 
     key = cv2.waitKey(1) & 0xFF
 
@@ -69,10 +93,3 @@ while True:
 
 camera.release()
 cv2.destroyAllWindows()
-
-url = 'http://127.0.0.1/test'
-files = {'file': open('output.avi', 'rb')}
-r = requests.post(url, files=files)
-
-print(r.status_code)
-print(r)

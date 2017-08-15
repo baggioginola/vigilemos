@@ -3,8 +3,9 @@ import os
 
 
 class Video:
-    def __init__(self, path="", file="output.avi"):
+    def __init__(self, path="", file="numVideo.avi"):
         self.videoFile = path + file
+        self.deleteExistingFile()
         self.setVideoWriterObject()
 
     def saveVideo(self, frame):
@@ -20,3 +21,7 @@ class Video:
     def deleteExistingFile(self):
         if os.path.isfile(self.videoFile):
             os.remove(self.videoFile)
+
+    def __del__(self):
+        self.out.release()
+
