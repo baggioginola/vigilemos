@@ -11,6 +11,7 @@ class MotionDetection:
     video = None
     camera = None
     firstFrame = None
+    frame = None
     numRecordedVideos = 0
     framesRecorded = 0
 
@@ -34,29 +35,42 @@ class MotionDetection:
     def initialize_video(self):
         self.set_video_object()
 
+    def set_gray(self):
+        gray = cv2.cvtColor(self.frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (21, 21), 0)
+        return gray
+
+    def set_thresh(self, gray):
+        cv2.accumulateWeighted(gray, self.firstFrame, 0.5)
+        frame_delta = cv2.absdiff(gray, cv2.convertScaleAbs(self.firstFrame))
+        thresh = cv2.threshold(frame_delta, self.conf["delta_thresh"], 255, cv2.THRESH_BINARY)[1]
+
+        # dilate the thresholded image to fill in holes, then find contours on thresholded image
+        thresh = cv2.dilate(thresh, None, iterations=2)
+        return thresh
+
+    @staticmethod
+    def set_contours(thresh):
+        return cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
     def process_video(self):
         while True:
-            (grabbed, frame) = self.camera.read()
+            (grabbed, self.frame) = self.camera.read()
             text = "Unoccupied"
             movement = False
 
             if not grabbed:
                 break
 
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            gray = cv2.GaussianBlur(gray, (21, 21), 0)
+            gray = self.set_gray()
 
             if self.firstFrame is None:
                 self.firstFrame = gray.copy().astype("float")
                 continue
 
-            cv2.accumulateWeighted(gray, self.firstFrame, 0.5)
-            frameDelta = cv2.absdiff(gray, cv2.convertScaleAbs(self.firstFrame))
-            thresh = cv2.threshold(frameDelta, self.conf["delta_thresh"], 255, cv2.THRESH_BINARY)[1]
+            thresh = self.set_thresh(gray)
 
-            # dilate the thresholded image to fill in holes, then find contours on thresholded image
-            thresh = cv2.dilate(thresh, None, iterations=2)
-            (_, cnts, _) = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            (_, cnts, _) = MotionDetection.set_contours(thresh)
 
             # loop over the contours
             for c in cnts:
@@ -66,19 +80,21 @@ class MotionDetection:
 
                 # compute the bounding box for the contour, draw it on the frame, and update the text
                 (x, y, w, h) = cv2.boundingRect(c)
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.rectangle(self.frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
                 text = "Occupied"
                 movement = True
 
             # draw the text and timestamp on the frame
-            cv2.putText(frame, "Room Status:{}".format(text), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-            cv2.putText(frame, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
+            cv2.putText(self.frame, "Room Status:{}".format(text), (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255),
+                        2)
+            cv2.putText(self.frame, datetime.datetime.now().strftime("%A %d %B %Y %I:%M:%S%p"),
+                        (10, self.frame.shape[0] - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
 
-            cv2.imshow("Security Feed", frame)
+            cv2.imshow("Security Feed", self.frame)
 
             if movement:
-                self.video.saveVideo(frame)
+                self.video.saveVideo(self.frame)
                 self.framesRecorded += 1
 
             if self.framesRecorded == 16:
@@ -105,10 +121,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-'''
-def sendVideo(file):
-    url = 'http://192.168.0.21/test.php'
-    files = {'file': open(file, 'rb')}
-    r = requests.post(url, files=files)
-'''

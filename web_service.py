@@ -2,6 +2,9 @@ import requests
 
 
 class WebService:
+    # endPoint = 'http://vigilemos.com/'
+    # sendScript = 'test_upload.php'
+
     endPoint = 'http://192.168.0.21/'
     sendScript = 'test.php'
 
@@ -10,4 +13,5 @@ class WebService:
 
     def send(self, file):
         files = {'file': open(file, 'rb')}
-        requests.post(self.get_url_to_send(), files=files)
+        r = requests.post(self.get_url_to_send(), files=files)
+        print(r)
