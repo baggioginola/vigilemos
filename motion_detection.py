@@ -1,7 +1,10 @@
 import datetime
-import time
-import cv2
 import json
+import time
+import warnings
+
+import cv2
+import imutils
 
 from video import Video
 
@@ -10,6 +13,7 @@ class MotionDetection:
     conf = None
     video = None
     camera = None
+    rawCapture = None
     firstFrame = None
     frame = None
     numRecordedVideos = 0
@@ -26,6 +30,12 @@ class MotionDetection:
         self.video = Video(self.numRecordedVideos)
 
     def set_camera_object(self):
+        '''
+        self.camera = PiCamera()
+        self.camera.resolution = tuple(self.conf["resolution"])
+        self.camera.framerate = self.conf["fps"]
+        self.rawCapture = PiRGBArray(self.camera, size=tuple(self.conf["resolution"]))
+        '''
         self.camera = cv2.VideoCapture(0)
 
     def initialize_camera(self):
@@ -40,9 +50,9 @@ class MotionDetection:
         gray = cv2.GaussianBlur(gray, (21, 21), 0)
         return gray
 
-    def set_thresh(self, gray):
-        cv2.accumulateWeighted(gray, self.firstFrame, 0.5)
-        frame_delta = cv2.absdiff(gray, cv2.convertScaleAbs(self.firstFrame))
+    def set_thresh(self, gray, avg):
+        cv2.accumulateWeighted(gray, avg, 0.5)
+        frame_delta = cv2.absdiff(gray, cv2.convertScaleAbs(avg))
         thresh = cv2.threshold(frame_delta, self.conf["delta_thresh"], 255, cv2.THRESH_BINARY)[1]
 
         # dilate the thresholded image to fill in holes, then find contours on thresholded image
@@ -54,23 +64,24 @@ class MotionDetection:
         return cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     def process_video(self):
+        avg = None
+
         while True:
             (grabbed, self.frame) = self.camera.read()
             text = "Unoccupied"
             movement = False
 
-            if not grabbed:
-                break
-
             gray = self.set_gray()
 
-            if self.firstFrame is None:
-                self.firstFrame = gray.copy().astype("float")
+            if avg is None:
+                print("[INFO[ starting background model...")
+                avg = gray.copy().astype("float")
                 continue
 
-            thresh = self.set_thresh(gray)
+            thresh = self.set_thresh(gray, avg)
 
-            (_, cnts, _) = MotionDetection.set_contours(thresh)
+            cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            cnts = cnts[0] if imutils.is_cv2() else cnts[1]
 
             # loop over the contours
             for c in cnts:
@@ -107,12 +118,13 @@ class MotionDetection:
             key = cv2.waitKey(1) & 0xFF
 
             if key == ord("q"):
+                cv2.destroyAllWindows()
+                self.camera.release()
                 break
-        self.camera.release()
-        cv2.destroyAllWindows()
 
 
 def main():
+    warnings.filterwarnings("ignore")
     motion_detection = MotionDetection()
     motion_detection.initialize_camera()
     motion_detection.initialize_video()

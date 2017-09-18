@@ -1,5 +1,6 @@
-import cv2
 import os
+
+import cv2
 
 from web_service import WebService
 
@@ -20,7 +21,8 @@ class Video:
     @staticmethod
     def send_video(num_recorded_videos):
         web_service = WebService()
-        web_service.send(Video.get_video_name(num_recorded_videos))
+        response = web_service.send(Video.get_video_name(num_recorded_videos))
+        Video.deleteVideoFile(num_recorded_videos)
 
     def setCodec(self):
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
@@ -31,11 +33,21 @@ class Video:
 
     @staticmethod
     def get_video_name(num_recorded_videos):
-        return 'output' + str(num_recorded_videos) + '.avi'
+        videoName = 'output'
+        extension = '.avi'
+        return videoName + str(num_recorded_videos) + extension
 
     def deleteExistingFile(self):
         if os.path.isfile(self.videoFile):
             os.remove(self.videoFile)
+
+    @staticmethod
+    def deleteVideoFile(num_recorded_videos):
+        if os.path.isfile(Video.get_video_name(num_recorded_videos)):
+            os.remove(Video.get_video_name(num_recorded_videos))
+
+    def release(self):
+        self.out.release()
 
     def __del__(self):
         self.out.release()
