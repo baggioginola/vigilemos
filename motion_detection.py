@@ -27,7 +27,7 @@ class MotionDetection:
             self.conf = json.load(json_data)
 
     def set_video_object(self):
-        self.video = Video(self.numRecordedVideos)
+        self.video = Video()
 
     def set_camera_object(self):
         '''
@@ -110,8 +110,7 @@ class MotionDetection:
 
             if self.framesRecorded == 16:
                 del self.video
-                Video.send_video(self.numRecordedVideos)
-                self.numRecordedVideos += 1
+                Video.send_video()
                 self.set_video_object()
                 self.framesRecorded = 0
 
