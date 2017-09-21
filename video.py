@@ -1,6 +1,7 @@
 import os
 
 import cv2
+from ffmpy import FFmpeg
 
 from web_service import WebService
 
@@ -12,8 +13,8 @@ class Video:
 
     def __init__(self):
         self.videoFile = self.videoName + self.ext
-        self.deleteExistingFile()
-        self.setVideoWriterObject()
+        self.delete_existing_file()
+        self.set_video_writer_object()
 
     def saveVideo(self, frame):
         self.out.write(frame)
@@ -21,30 +22,44 @@ class Video:
     @staticmethod
     def send_video():
         web_service = WebService()
-        web_service.send(Video.get_video_name())
-        Video.deleteVideoFile()
+        Video.convert_avi_to_mp4()
+        web_service.send(Video.get_mp4_video())
+        Video.delete_video_file()
 
-    def setCodec(self):
+    def set_codec(self):
         self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-    def setVideoWriterObject(self):
-        self.setCodec()
+    def set_video_writer_object(self):
+        self.set_codec()
         self.out = cv2.VideoWriter(self.videoFile, self.fourcc, 20.0, (640, 480))
 
     @staticmethod
-    def get_video_name():
-        videoName = 'output'
+    def get_avi_video():
+        video_name = 'output'
         extension = '.avi'
-        return videoName + extension
+        return video_name + extension
 
-    def deleteExistingFile(self):
+    @staticmethod
+    def get_mp4_video():
+        video_name = 'output'
+        extension = '.mp4'
+        return video_name + extension
+
+    @staticmethod
+    def convert_avi_to_mp4():
+        ff = FFmpeg(inputs={Video.get_avi_video(): None}, outputs={Video.get_mp4_video(): None})
+        ff.run()
+        return True
+
+    def delete_existing_file(self):
         if os.path.isfile(self.videoFile):
             os.remove(self.videoFile)
 
     @staticmethod
-    def deleteVideoFile():
-        if os.path.isfile(Video.get_video_name()):
-            os.remove(Video.get_video_name())
+    def delete_video_file():
+        if os.path.isfile(Video.get_avi_video()) and os.path.isfile(Video.get_mp4_video()):
+            os.remove(Video.get_avi_video())
+            os.remove(Video.get_mp4_video())
 
     def release(self):
         self.out.release()
