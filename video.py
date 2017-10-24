@@ -52,8 +52,9 @@ class Video:
         return True
 
     def delete_existing_file(self):
-        if os.path.isfile(self.videoFile):
-            os.remove(self.videoFile)
+        if os.path.isfile(Video.get_avi_video()) and os.path.isfile(Video.get_mp4_video()):
+            os.remove(Video.get_avi_video())
+            os.remove(Video.get_mp4_video())
 
     @staticmethod
     def delete_video_file():
