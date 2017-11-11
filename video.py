@@ -12,8 +12,8 @@ class Video:
     path = ''
 
     def __init__(self):
+        Video.delete_video_file()
         self.videoFile = self.videoName + self.ext
-        self.delete_existing_file()
         self.set_video_writer_object()
 
     def saveVideo(self, frame):
@@ -51,15 +51,11 @@ class Video:
         ff.run()
         return True
 
-    def delete_existing_file(self):
-        if os.path.isfile(Video.get_avi_video()) and os.path.isfile(Video.get_mp4_video()):
-            os.remove(Video.get_avi_video())
-            os.remove(Video.get_mp4_video())
-
     @staticmethod
     def delete_video_file():
-        if os.path.isfile(Video.get_avi_video()) and os.path.isfile(Video.get_mp4_video()):
+        if os.path.isfile(Video.get_avi_video()):
             os.remove(Video.get_avi_video())
+        if os.path.isfile(Video.get_mp4_video()):
             os.remove(Video.get_mp4_video())
 
     def release(self):
