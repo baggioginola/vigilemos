@@ -1,7 +1,7 @@
 import time
+import uuid
 
 import requests
-import uuid
 
 
 class WebService:
@@ -10,6 +10,7 @@ class WebService:
 
     endPoint = 'http://192.168.0.21/Github/vigilemos/'
     sendScript = 'uploadFile'
+    statusCameraRoute = 'subscriber/cameras/getStatus'
 
     videoName = 'output'
 
@@ -17,8 +18,8 @@ class WebService:
     def get_milli_seconds():
         return int(round(time.time() * 1000))
 
-    def get_url_to_send(self):
-        return self.endPoint + self.sendScript
+    def set_route(self, route):
+        return self.endPoint + route
 
     @staticmethod
     def get_mac():
@@ -32,12 +33,24 @@ class WebService:
         data = {'name': WebService.get_mac(), 'time': WebService.get_milli_seconds()}
 
         try:
-            r = requests.post(self.get_url_to_send(), files=files, data=data)
+            r = requests.post(self.set_route(self.sendScript), files=files, data=data)
 
             print(r.text)
 
             if not r.status_code // 100 == 2:
                 return "Error: Unexpected response {}".format(r)
             return r.status_code
+        except requests.exceptions.RequestException as e:
+            return "Error: {}".format(e)
+
+    def get_camera_status(self):
+        data = {'mac_address': WebService.get_mac()}
+
+        try:
+            r = requests.get(self.set_route(self.statusCameraRoute), params=data)
+
+            if not r.status_code // 100 == 2:
+                return "Error: Unexpected response {}".format(r)
+            return r.text
         except requests.exceptions.RequestException as e:
             return "Error: {}".format(e)

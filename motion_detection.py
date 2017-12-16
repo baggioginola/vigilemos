@@ -7,6 +7,7 @@ import cv2
 import imutils
 
 from video import Video
+from web_service import WebService
 
 
 class MotionDetection:
@@ -18,6 +19,7 @@ class MotionDetection:
     frame = None
     numRecordedVideos = 0
     framesRecorded = 0
+    web_service = None
 
     def __init__(self, json_file='conf.json'):
         self.init_config(json_file)
@@ -28,6 +30,9 @@ class MotionDetection:
 
     def set_video_object(self):
         self.video = Video()
+
+    def set_web_service_object(self):
+        self.web_service = WebService()
 
     def set_camera_object(self):
         '''
@@ -66,6 +71,7 @@ class MotionDetection:
     def process_video(self):
         avg = None
 
+        self.set_web_service_object()
         while True:
             (grabbed, self.frame) = self.camera.read()
             text = "Unoccupied"
@@ -104,15 +110,18 @@ class MotionDetection:
 
             cv2.imshow("Security Feed", self.frame)
 
-            if movement:
-                self.video.saveVideo(self.frame)
-                self.framesRecorded += 1
+            camera_status = self.web_service.get_camera_status()
 
-            if self.framesRecorded == 16:
-                del self.video
-                Video.send_video()
-                self.set_video_object()
-                self.framesRecorded = 0
+            if camera_status == '1':
+                if movement:
+                    self.video.saveVideo(self.frame)
+                    self.framesRecorded += 1
+
+                if self.framesRecorded == 16:
+                    del self.video
+                    Video.send_video()
+                    self.set_video_object()
+                    self.framesRecorded = 0
 
             key = cv2.waitKey(1) & 0xFF
 
