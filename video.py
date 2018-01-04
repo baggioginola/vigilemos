@@ -7,56 +7,42 @@ from web_service import WebService
 
 
 class Video:
-    ext = '.avi'
-    videoName = 'output'
+    conf = None
     path = ''
+    codec = None
+    out = None
 
-    def __init__(self):
-        Video.delete_video_file()
-        self.videoFile = self.videoName + self.ext
+    def __init__(self, conf):
+        self.conf = conf
+        self.delete_files()
         self.set_video_writer_object()
 
-    def saveVideo(self, frame):
+    def save_video(self, frame):
         self.out.write(frame)
 
-    @staticmethod
-    def send_video():
+    def send_video(self):
         web_service = WebService()
-        Video.convert_avi_to_mp4()
-        web_service.send(Video.get_mp4_video())
-        Video.delete_video_file()
+        self.convert_avi_to_mp4()
+        web_service.send(self.conf['video_converted'])
+        self.delete_files()
 
     def set_codec(self):
-        self.fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        self.codec = cv2.VideoWriter_fourcc(*'XVID')
 
     def set_video_writer_object(self):
         self.set_codec()
-        self.out = cv2.VideoWriter(self.videoFile, self.fourcc, 20.0, (640, 480))
+        self.out = cv2.VideoWriter(self.conf['video'], self.codec, 20.0, (640, 480))
 
-    @staticmethod
-    def get_avi_video():
-        video_name = 'output'
-        extension = '.avi'
-        return video_name + extension
-
-    @staticmethod
-    def get_mp4_video():
-        video_name = 'output'
-        extension = '.mp4'
-        return video_name + extension
-
-    @staticmethod
-    def convert_avi_to_mp4():
-        ff = FFmpeg(inputs={Video.get_avi_video(): None}, outputs={Video.get_mp4_video(): None})
+    def convert_avi_to_mp4(self):
+        ff = FFmpeg(inputs={self.conf['video']: None}, outputs={self.conf['video_converted']: None})
         ff.run()
         return True
 
-    @staticmethod
-    def delete_video_file():
-        if os.path.isfile(Video.get_avi_video()):
-            os.remove(Video.get_avi_video())
-        if os.path.isfile(Video.get_mp4_video()):
-            os.remove(Video.get_mp4_video())
+    def delete_files(self):
+        if os.path.isfile(self.conf['video']):
+            os.remove(self.conf['video'])
+        if os.path.isfile(self.conf['video_converted']):
+            os.remove(self.conf['video_converted'])
 
     def release(self):
         self.out.release()
